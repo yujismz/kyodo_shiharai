@@ -156,19 +156,20 @@
   .entry{
     border-bottom:1px solid var(--line);
     padding:11px 0;
-    display:flex; gap:10px; align-items:flex-start;
+    display:flex; flex-direction:column; gap:5px;
   }
   .entry:last-child{ border-bottom:none; }
-  .entry .date{
-    font-size:11px; color:var(--sub); width:48px; flex-shrink:0; line-height:1.4; padding-top:2px;
+  .entry-head{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .entry-head .date{
+    font-size:11px; color:var(--sub); flex-shrink:0; white-space:nowrap;
   }
-  .entry .body{ flex:1; min-width:0; }
-  .entry .item-name{ font-size:14px; font-weight:600; word-break:break-word; }
+  .entry .body{ min-width:0; }
+  .entry .item-name{ font-size:14px; font-weight:600; word-break:break-word; flex:1; min-width:100px; }
   .entry .tags{ margin-top:3px; display:flex; gap:5px; flex-wrap:wrap; }
   .tag{
     font-size:10px; padding:2px 7px; border-radius:7px; background:#f1ece0; color:var(--sub);
   }
-  .entry .nums{ text-align:right; flex-shrink:0; font-size:12px; min-width:118px; }
+  .entry .nums{ text-align:left; font-size:12px; width:100%; }
   .entry .nums .total{ font-weight:700; font-size:14px; }
   .entry .nums .split{ color:var(--sub); margin-top:2px; }
   .entry .nums .split .y{ color:var(--yuji); font-weight:600; }
@@ -1699,15 +1700,15 @@ function renderEntries(){
       const d = e.date ? e.date.slice(5).replace('-','/') : '--';
       return `<div class="entry-row-wrap ${e.excluded?'excluded-row':''} ${e.settled?'settled-row':''}">
         <div class="entry" data-id="${e.id}">
-          <div class="date">${d}</div>
-          <div class="body">
-            <div class="item-name">${escapeHtml(e.item)}</div>
-            <div class="tags">
+          <div class="entry-head">
+            <span class="date">${d}</span>
+            <span class="item-name">${escapeHtml(e.item)}</span>
+          </div>
+          <div class="tags">
               ${e.category ? `<span class="tag">${escapeHtml(e.category)}</span>`:''}
               ${e.person ? `<span class="tag">${escapeHtml(e.person)}</span>`:''}
               ${e.excluded ? `<span class="tag excluded-tag">共同除外</span>`:''}
               ${e.settled ? `<span class="tag settled-tag">精算済み</span>`:''}
-            </div>
           </div>
           <div class="nums">
             ${entryNumsHtml(e)}
@@ -1933,14 +1934,14 @@ function renderRecentList(){
     const d = e.date ? e.date.slice(5).replace('-','/') : '--';
     return `<div class="entry-row-wrap ${e.excluded?'excluded-row':''} ${e.settled?'settled-row':''}">
       <div class="entry" data-id="${e.id}">
-        <div class="date">${d}</div>
-        <div class="body">
-          <div class="item-name">${escapeHtml(e.item)}</div>
-          <div class="tags">
+        <div class="entry-head">
+          <span class="date">${d}</span>
+          <span class="item-name">${escapeHtml(e.item)}</span>
+        </div>
+        <div class="tags">
             ${e.category ? `<span class="tag">${escapeHtml(e.category)}</span>`:''}
             ${e.excluded ? `<span class="tag excluded-tag">共同除外</span>`:''}
             ${e.settled ? `<span class="tag settled-tag">精算済み</span>`:''}
-          </div>
         </div>
         <div class="nums">
           ${entryNumsHtml(e)}
