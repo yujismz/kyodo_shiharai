@@ -298,10 +298,16 @@
     /* 時計回りに「先の色」が右半分・「後の色」が左半分になるため、
        左の凡例（勇治）と左半分の色を合わせるには、美香の色を先に置く必要がある */
     background:conic-gradient(var(--donut-m-color,var(--chart-m)) 0% var(--pct-m,50%), var(--donut-y-color,var(--chart-y)) var(--pct-m,50%) 100%);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.14), inset 0 1px 2px rgba(255,255,255,0.25);
+  }
+  .donut-chart::before{
+    content:''; position:absolute; inset:0; border-radius:50%; pointer-events:none;
+    background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.38), rgba(255,255,255,0) 55%);
   }
   .donut-hole{
     position:absolute; inset:18%; background:var(--surface); border-radius:50%;
     display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.6);
   }
   .donut-hole .v{ font-size:15px; font-weight:700; color:var(--ink); }
   .donut-hole .p{ font-size:10px; color:var(--sub); margin-top:1px; }
