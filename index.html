@@ -295,7 +295,9 @@
   .summary-chart-wrap{ display:flex; flex-direction:column; align-items:center; gap:14px; margin-bottom:12px; }
   .donut-chart{
     width:min(150px,42vw); height:min(150px,42vw); border-radius:50%; position:relative;
-    background:conic-gradient(var(--donut-y-color,var(--chart-y)) 0% var(--pct-y,50%), var(--donut-m-color,var(--chart-m)) var(--pct-y,50%) 100%);
+    /* 時計回りに「先の色」が右半分・「後の色」が左半分になるため、
+       左の凡例（勇治）と左半分の色を合わせるには、美香の色を先に置く必要がある */
+    background:conic-gradient(var(--donut-m-color,var(--chart-m)) 0% var(--pct-m,50%), var(--donut-y-color,var(--chart-y)) var(--pct-m,50%) 100%);
   }
   .donut-hole{
     position:absolute; inset:18%; background:var(--surface); border-radius:50%;
@@ -2334,11 +2336,11 @@ function renderSummary(){
   document.getElementById('sumMikaPct').textContent = `${mPct}%`;
   const donut = document.getElementById('summaryDonut');
   if(totals.total > 0){
-    donut.style.setProperty('--pct-y', yPct+'%');
+    donut.style.setProperty('--pct-m', mPct+'%');
     donut.style.removeProperty('--donut-y-color');
     donut.style.removeProperty('--donut-m-color');
   } else {
-    donut.style.setProperty('--pct-y', '100%');
+    donut.style.setProperty('--pct-m', '100%');
     donut.style.setProperty('--donut-y-color', 'var(--line)');
     donut.style.setProperty('--donut-m-color', 'var(--line)');
   }
