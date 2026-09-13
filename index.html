@@ -14,8 +14,10 @@
     --line: #e7ddc9;
     --yuji: #2f6f6a;
     --yuji-soft: #e3f1ee;
+    --yuji-dark: #234f4b;
     --mika: #b85c3c;
     --mika-soft: #fbe9e1;
+    --mika-dark: #8a3f28;
     --chart-y: #ef6a5a;
     --chart-m: #3d8bd4;
     --accent: #c79a3a;
@@ -26,25 +28,25 @@
   /* テーマカラー（揉めない家計簿から移植・2026-09-13） */
   :root[data-theme="earth"]{
     --bg:#f2ece0; --paper:#fdfaf3; --surface:#fdfaf3; --ink:#3d3226; --sub:#8a7a5f; --line:#ded2ba;
-    --yuji:#b5592f; --yuji-soft:#f3e2d6; --mika:#1f78a0; --mika-soft:#dcedf2;
+    --yuji:#b5592f; --yuji-soft:#f3e2d6; --yuji-dark:#7a3a1d; --mika:#1f78a0; --mika-soft:#dcedf2; --mika-dark:#144a5c;
     --chart-y:#b5592f; --chart-m:#1f78a0;
     --accent:#8a6d3f; --danger:#a8402b;
   }
   :root[data-theme="green"]{
     --bg:#f1f6ee; --paper:#ffffff; --surface:#ffffff; --ink:#2d3a2a; --sub:#8a9a82; --line:#dbe7d4;
-    --yuji:#256b38; --yuji-soft:#dcece0; --mika:#7abf68; --mika-soft:#eaf5e3;
+    --yuji:#256b38; --yuji-soft:#dcece0; --yuji-dark:#173f20; --mika:#7abf68; --mika-soft:#eaf5e3; --mika-dark:#4a8a42;
     --chart-y:#256b38; --chart-m:#7abf68;
     --accent:#4a8a52; --danger:#b3463c;
   }
   :root[data-theme="blue"]{
     --bg:#eef4fa; --paper:#ffffff; --surface:#ffffff; --ink:#26313d; --sub:#8592a0; --line:#dbe6f0;
-    --yuji:#1a5490; --yuji-soft:#dceaf5; --mika:#6bb0e8; --mika-soft:#e7f3fc;
+    --yuji:#1a5490; --yuji-soft:#dceaf5; --yuji-dark:#0f3560; --mika:#6bb0e8; --mika-soft:#e7f3fc; --mika-dark:#2a6ea0;
     --chart-y:#1a5490; --chart-m:#6bb0e8;
     --accent:#3d7ab8; --danger:#b3463c;
   }
   :root[data-theme="pink"]{
     --bg:#fbf1f4; --paper:#ffffff; --surface:#ffffff; --ink:#4a323c; --sub:#a68c96; --line:#f2dde6;
-    --yuji:#a03d68; --yuji-soft:#f5e0e8; --mika:#e88ba8; --mika-soft:#fceef2;
+    --yuji:#a03d68; --yuji-soft:#f5e0e8; --yuji-dark:#6b2144; --mika:#e88ba8; --mika-soft:#fceef2; --mika-dark:#b5567a;
     --chart-y:#a03d68; --chart-m:#e88ba8;
     --accent:#d9698f; --danger:#b8502f;
   }
@@ -111,12 +113,12 @@
     color:#fff;
     margin-bottom:14px;
     box-shadow:var(--shadow);
-    background: linear-gradient(135deg, var(--yuji), #234f4b);
+    background: linear-gradient(135deg, var(--yuji), var(--yuji-dark));
     transition:background 0.3s;
   }
-  .balance-banner.mika-owes{ background: linear-gradient(135deg, var(--yuji), #234f4b); }
-  .balance-banner.yuji-owes{ background: linear-gradient(135deg, var(--mika), #8a3f28); }
-  .balance-banner.flat{ background: linear-gradient(135deg, #6b6358, #4a443b); }
+  .balance-banner.mika-owes{ background: linear-gradient(135deg, var(--yuji), var(--yuji-dark)); }
+  .balance-banner.yuji-owes{ background: linear-gradient(135deg, var(--mika), var(--mika-dark)); }
+  .balance-banner.flat{ background: linear-gradient(135deg, var(--sub), var(--ink)); }
   .balance-banner .label{ font-size:12px; opacity:0.85; margin-bottom:4px; }
   .balance-banner .amount{ font-size:30px; font-weight:700; letter-spacing:0.01em; }
   .balance-banner .sub{ font-size:12px; opacity:0.85; margin-top:6px; }
@@ -333,7 +335,7 @@
   .summary-grid .box.y .v{ color:var(--yuji); }
   .summary-grid .box.m .v{ color:var(--mika); }
   .unsettled-strip{
-    margin-top:10px; padding:10px 12px; border-radius:10px; background:#fbe9e1; font-size:12px; color:var(--mika); font-weight:600;
+    margin-top:10px; padding:10px 12px; border-radius:10px; background:var(--mika-soft); font-size:12px; color:var(--mika); font-weight:600;
     display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;
   }
   .unsettled-strip.zero{ background:#f1ece0; color:var(--sub); }
@@ -375,10 +377,10 @@
   .ratio-bar-pcts .y{ color:var(--yuji); font-weight:700; }
   .ratio-bar-pcts .m{ color:var(--mika); font-weight:700; }
   .confirm-lock-note{
-    background:#fbe9e1; color:var(--mika); font-size:12px; font-weight:600;
+    background:var(--mika-soft); color:var(--mika); font-size:12px; font-weight:600;
     padding:9px 11px; border-radius:10px; margin:10px 0; line-height:1.5;
   }
-  .confirm-lock-note.ok{ background:#e3f1ee; color:var(--yuji); }
+  .confirm-lock-note.ok{ background:var(--yuji-soft); color:var(--yuji); }
   .btn-primary[disabled]{ opacity:0.4; }
   .diff-note{
     margin:12px 0; padding:11px 13px; border-radius:10px; font-size:13px; font-weight:700;
@@ -443,7 +445,7 @@
   .header-user .me.mika{ color:var(--mika); }
   .sync-status{ font-size:10px; padding:2px 7px; border-radius:8px; background:#f1ece0; color:var(--sub); }
   .sync-status.ok{ background:var(--yuji-soft); color:var(--yuji); }
-  .sync-status.warn{ background:#fbe9e1; color:var(--mika); }
+  .sync-status.warn{ background:var(--mika-soft); color:var(--mika); }
 </style>
 </head>
 <body>
