@@ -8,6 +8,7 @@
   :root{
     --bg: #faf6ef;
     --paper: #ffffff;
+    --surface: #fffdf9;
     --ink: #2e2a24;
     --sub: #8a8275;
     --line: #e7ddc9;
@@ -15,10 +16,37 @@
     --yuji-soft: #e3f1ee;
     --mika: #b85c3c;
     --mika-soft: #fbe9e1;
+    --chart-y: #ef6a5a;
+    --chart-m: #3d8bd4;
     --accent: #c79a3a;
     --danger: #b3463c;
     --shadow: 0 2px 10px rgba(60,50,30,0.07);
     --radius: 14px;
+  }
+  /* テーマカラー（揉めない家計簿から移植・2026-09-13） */
+  :root[data-theme="earth"]{
+    --bg:#f2ece0; --paper:#fdfaf3; --surface:#fdfaf3; --ink:#3d3226; --sub:#8a7a5f; --line:#ded2ba;
+    --yuji:#b5592f; --yuji-soft:#f3e2d6; --mika:#1f78a0; --mika-soft:#dcedf2;
+    --chart-y:#b5592f; --chart-m:#1f78a0;
+    --accent:#8a6d3f; --danger:#a8402b;
+  }
+  :root[data-theme="green"]{
+    --bg:#f1f6ee; --paper:#ffffff; --surface:#ffffff; --ink:#2d3a2a; --sub:#8a9a82; --line:#dbe7d4;
+    --yuji:#256b38; --yuji-soft:#dcece0; --mika:#7abf68; --mika-soft:#eaf5e3;
+    --chart-y:#256b38; --chart-m:#7abf68;
+    --accent:#4a8a52; --danger:#b3463c;
+  }
+  :root[data-theme="blue"]{
+    --bg:#eef4fa; --paper:#ffffff; --surface:#ffffff; --ink:#26313d; --sub:#8592a0; --line:#dbe6f0;
+    --yuji:#1a5490; --yuji-soft:#dceaf5; --mika:#6bb0e8; --mika-soft:#e7f3fc;
+    --chart-y:#1a5490; --chart-m:#6bb0e8;
+    --accent:#3d7ab8; --danger:#b3463c;
+  }
+  :root[data-theme="pink"]{
+    --bg:#fbf1f4; --paper:#ffffff; --surface:#ffffff; --ink:#4a323c; --sub:#a68c96; --line:#f2dde6;
+    --yuji:#a03d68; --yuji-soft:#f5e0e8; --mika:#e88ba8; --mika-soft:#fceef2;
+    --chart-y:#a03d68; --chart-m:#e88ba8;
+    --accent:#d9698f; --danger:#b8502f;
   }
   *{box-sizing:border-box;}
   body{
@@ -262,6 +290,40 @@
   .entry-row-wrap:last-child{ border-bottom:none; }
   .entry-row-wrap .entry{ border-bottom:none; padding:0; flex:1; cursor:pointer; }
   .summary-card .period-select{ margin-bottom:10px; }
+  .summary-chart-wrap{ display:flex; flex-direction:column; align-items:center; gap:14px; margin-bottom:12px; }
+  .donut-chart{
+    width:min(150px,42vw); height:min(150px,42vw); border-radius:50%; position:relative;
+    background:conic-gradient(var(--donut-y-color,var(--chart-y)) 0% var(--pct-y,50%), var(--donut-m-color,var(--chart-m)) var(--pct-y,50%) 100%);
+  }
+  .donut-hole{
+    position:absolute; inset:18%; background:var(--surface); border-radius:50%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+  }
+  .donut-hole .v{ font-size:15px; font-weight:700; color:var(--ink); }
+  .donut-hole .p{ font-size:10px; color:var(--sub); margin-top:1px; }
+  .summary-stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
+  .summary-stat{ background:var(--bg); border-radius:10px; padding:10px; text-align:center; }
+  .stat-name{ display:flex; align-items:center; justify-content:center; gap:5px; font-size:12px; color:var(--sub); }
+  .stat-amt{ font-size:17px; font-weight:700; color:var(--ink); margin-top:4px; }
+  .stat-pct{ font-size:11px; color:var(--sub); }
+  .legend-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .legend-dot.y{ background:var(--chart-y); }
+  .legend-dot.m{ background:var(--chart-m); }
+  /* アコーディオン（設定タブの各カード。揉めない家計簿から移植） */
+  #tab-settings .card > h2{
+    cursor:pointer; position:relative; user-select:none;
+  }
+  #tab-settings .card.collapsed > h2{ margin-bottom:-4px; }
+  #tab-settings .card > h2::after{
+    content:'▾'; position:absolute; right:0; top:0; color:var(--sub); transition:transform .15s;
+  }
+  #tab-settings .card.collapsed > h2::after{ transform:rotate(-90deg); }
+  #tab-settings .card.collapsed > *:not(h2){ display:none !important; }
+  .theme-swatch-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .theme-swatch{ display:flex; flex-direction:column; align-items:center; gap:4px; font-size:11px; color:var(--sub); cursor:pointer; }
+  .theme-swatch .dot{ width:28px; height:28px; border-radius:50%; border:2px solid transparent; }
+  .theme-swatch input:checked + .dot{ border-color:var(--ink); }
+  .theme-swatch input{ display:none; }
   .summary-grid{ display:flex; gap:8px; flex-wrap:wrap; }
   .summary-grid .box{
     flex:1; min-width:90px; background:#fffdf9; border:1px solid var(--line); border-radius:10px; padding:10px; text-align:center;
@@ -433,10 +495,25 @@
     <div class="card summary-card">
       <h2>負担額の概要</h2>
       <select id="summaryPeriod" class="period-select"></select>
-      <div class="summary-grid">
-        <div class="box"><div class="v" id="sumTotal">¥0</div><div class="p">総計</div></div>
-        <div class="box y"><div class="v" id="sumYuji">¥0</div><div class="p" id="sumYujiPct">勇治分担 0%</div></div>
-        <div class="box m"><div class="v" id="sumMika">¥0</div><div class="p" id="sumMikaPct">美香分担 0%</div></div>
+      <div class="summary-chart-wrap">
+        <div class="donut-chart" id="summaryDonut">
+          <div class="donut-hole">
+            <div class="v" id="sumTotal">¥0</div>
+            <div class="p">総計</div>
+          </div>
+        </div>
+        <div class="summary-stat-grid">
+          <div class="summary-stat">
+            <div class="stat-name"><span class="legend-dot y"></span>勇治</div>
+            <div class="stat-amt" id="sumYuji">¥0</div>
+            <div class="stat-pct" id="sumYujiPct">0%</div>
+          </div>
+          <div class="summary-stat">
+            <div class="stat-name"><span class="legend-dot m"></span>美香</div>
+            <div class="stat-amt" id="sumMika">¥0</div>
+            <div class="stat-pct" id="sumMikaPct">0%</div>
+          </div>
+        </div>
       </div>
       <div class="unsettled-strip zero" id="unsettledStrip">未精算金額（割合確定による差分）：¥0／未確認の項目：0件</div>
       <div class="unsettled-strip zero" id="diffStrip" style="margin-top:6px;">肩代わり額との差額合計：¥0</div>
@@ -670,6 +747,49 @@
       </div>
     </div>
     <div class="card">
+      <h2>メール通知</h2>
+      <p class="small-note">記録を追加すると、記録した本人以外にメールでお知らせします（ログイン中のユーザーが自動で判定されます）。宛先を登録しない場合は送信されません。</p>
+      <div class="field">
+        <label>勇治のメールアドレス</label>
+        <input type="email" id="notifyEmailYuji" placeholder="yuji@example.com">
+      </div>
+      <div class="field">
+        <label>美香のメールアドレス</label>
+        <input type="email" id="notifyEmailMika" placeholder="mika@example.com">
+      </div>
+      <button type="button" class="btn-secondary" id="saveNotifyEmailsBtn" style="width:100%;">保存する</button>
+    </div>
+    <div class="card">
+      <h2>テーマカラー</h2>
+      <div class="theme-swatch-row">
+        <label class="theme-swatch">
+          <input type="radio" name="themeColor" value="default" onchange="applyTheme('default')">
+          <span class="dot" style="background:linear-gradient(135deg,#2f6f6a,#b85c3c);"></span>
+          標準
+        </label>
+        <label class="theme-swatch">
+          <input type="radio" name="themeColor" value="earth" onchange="applyTheme('earth')">
+          <span class="dot" style="background:linear-gradient(135deg,#b5592f,#1f78a0);"></span>
+          アース系
+        </label>
+        <label class="theme-swatch">
+          <input type="radio" name="themeColor" value="green" onchange="applyTheme('green')">
+          <span class="dot" style="background:linear-gradient(135deg,#256b38,#7abf68);"></span>
+          グリーン系
+        </label>
+        <label class="theme-swatch">
+          <input type="radio" name="themeColor" value="blue" onchange="applyTheme('blue')">
+          <span class="dot" style="background:linear-gradient(135deg,#1a5490,#6bb0e8);"></span>
+          ブルー系
+        </label>
+        <label class="theme-swatch">
+          <input type="radio" name="themeColor" value="pink" onchange="applyTheme('pink')">
+          <span class="dot" style="background:linear-gradient(135deg,#a03d68,#e88ba8);"></span>
+          淡いピンク系
+        </label>
+      </div>
+    </div>
+    <div class="card">
       <h2>エクセルから取込</h2>
       <p class="small-note">これまで使っていた共同支払い管理のエクセル（.xlsx）を読み込んで、支払い記録や毎月の定額費用として取り込みます。シート名「支払い」「毎月」を想定しています。取り込み内容は確認してから反映されます。</p>
       <button class="btn-secondary" id="excelImportBtn" style="width:100%;">エクセルファイルを選択</button>
@@ -867,6 +987,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 /* ===================== SAFE STORAGE WRAPPER =====================
   iPhone Safariなどでは file:// で開いたページに対し localStorage / sessionStorage が
@@ -914,7 +1035,8 @@ function defaultData(){
     fixed: [],
     fixedPayments: [],
     settlements: [],
-    settlementRequests: []
+    settlementRequests: [],
+    notifyEmails: { yuji: '', mika: '' }
   };
 }
 
@@ -923,6 +1045,93 @@ function getCategoryRatio(cat){
   const v = DATA.categoryRatios[cat];
   return (typeof v === 'number' && !isNaN(v)) ? v : 50;
 }
+
+// === テーマカラー（揉めない家計簿から移植・2026-09-13） ===
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  try{ localStorage.setItem('kThemeColor', theme); }catch(e){}
+  document.querySelectorAll('input[name="themeColor"]').forEach(function(r){ r.checked=(r.value===theme); });
+}
+(function initTheme(){
+  let saved = 'default';
+  try{ saved = localStorage.getItem('kThemeColor') || 'default'; }catch(e){}
+  applyTheme(saved);
+})();
+
+// === メール通知（EmailJS。揉めない家計簿から移植・2026-09-13） ===
+// 揉めない家計簿と同じEmailJSアカウント（全顧客共通のSaaS構成）を流用している。
+// 送信件数が増えてきた場合は、このアプリ専用のアカウント・テンプレートに分ける方がよい。
+const EMAILJS_CONFIG = {
+  publicKey: '9bHZ7BqsbqzHwAo9e',
+  serviceId: 'service_qnugrsj',
+  templateId: 'template_a7m3c0k',
+};
+let emailjsReady = false;
+function initEmailJS(){
+  try{
+    if(!window.emailjs || !EMAILJS_CONFIG.publicKey || !EMAILJS_CONFIG.serviceId || !EMAILJS_CONFIG.templateId){
+      emailjsReady = false;
+      return false;
+    }
+    emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
+    emailjsReady = true;
+    return true;
+  }catch(e){
+    console.error('emailjs init error', e);
+    emailjsReady = false;
+    return false;
+  }
+}
+async function sendEmailNotification(toEmail, toName, subject, message){
+  if(!emailjsReady || !toEmail) return false;
+  try{
+    await emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
+      to_email: toEmail, to_name: toName, subject: subject, message: message,
+    });
+    return true;
+  }catch(e){
+    console.error('email send error', e);
+    return false;
+  }
+}
+// currentUser（記録した本人）以外の側へ、新しい記録を知らせる。
+// 会員ログイン（DATA.users）は無いので、設定画面に登録したメールアドレスだけを見る。
+async function notifyOtherParty(itemName){
+  if(!currentUser) return;
+  const other = currentUser === 'yuji' ? 'mika' : 'yuji';
+  const otherName = other === 'yuji' ? '勇治' : '美香';
+  const toEmail = DATA.notifyEmails && DATA.notifyEmails[other];
+  if(!toEmail) return; // 宛先未登録なら何もしない（無料機能なので導線の表示は不要）
+  await sendEmailNotification(
+    toEmail, otherName,
+    '【共同支払い管理】新しい支払い記録',
+    `新しい支払い記録「${itemName}」が追加されました。`
+  );
+}
+initEmailJS();
+
+// メール通知アドレスの設定UI
+function renderNotifyEmailFields(){
+  const yujiEl = document.getElementById('notifyEmailYuji');
+  const mikaEl = document.getElementById('notifyEmailMika');
+  if(!yujiEl || !mikaEl) return;
+  yujiEl.value = (DATA.notifyEmails && DATA.notifyEmails.yuji) || '';
+  mikaEl.value = (DATA.notifyEmails && DATA.notifyEmails.mika) || '';
+}
+document.getElementById('saveNotifyEmailsBtn').addEventListener('click', ()=>{
+  if(!DATA.notifyEmails) DATA.notifyEmails = { yuji:'', mika:'' };
+  DATA.notifyEmails.yuji = document.getElementById('notifyEmailYuji').value.trim();
+  DATA.notifyEmails.mika = document.getElementById('notifyEmailMika').value.trim();
+  save();
+  alert('保存しました');
+});
+
+// === 設定タブのアコーディオン化（揉めない家計簿から移植・2026-09-13） ===
+document.querySelectorAll('#tab-settings .card > h2').forEach(h2=>{
+  const card = h2.parentElement;
+  card.classList.add('collapsed');
+  h2.addEventListener('click', ()=> card.classList.toggle('collapsed'));
+});
 
 let DATA = load();
 
@@ -1771,6 +1980,7 @@ entryForm.addEventListener('submit', e=>{
   DATA.entries.push(entry);
   rememberItem(entry.item);
   save();
+  notifyOtherParty(entry.item);
   entryForm.reset();
   document.getElementById('f_date').value = todayStr();
   document.getElementById('f_ratio_hint').textContent = 'カテゴリを選ぶと、設定したデフォルトの分担割合が自動で入ります。';
@@ -2118,8 +2328,18 @@ function renderSummary(){
   document.getElementById('sumTotal').textContent = yen(totals.total);
   document.getElementById('sumYuji').textContent = yen(totals.yuji);
   document.getElementById('sumMika').textContent = yen(totals.mika);
-  document.getElementById('sumYujiPct').textContent = `勇治分担 ${yPct}%`;
-  document.getElementById('sumMikaPct').textContent = `美香分担 ${mPct}%`;
+  document.getElementById('sumYujiPct').textContent = `${yPct}%`;
+  document.getElementById('sumMikaPct').textContent = `${mPct}%`;
+  const donut = document.getElementById('summaryDonut');
+  if(totals.total > 0){
+    donut.style.setProperty('--pct-y', yPct+'%');
+    donut.style.removeProperty('--donut-y-color');
+    donut.style.removeProperty('--donut-m-color');
+  } else {
+    donut.style.setProperty('--pct-y', '100%');
+    donut.style.setProperty('--donut-y-color', 'var(--line)');
+    donut.style.setProperty('--donut-m-color', 'var(--line)');
+  }
 
   // 未精算 = 確定によって生じた差分（recordedMikaとの差）の合計（精算完了済みは除外）
   const unsettledOnly = entries.filter(e=>!e.settled);
@@ -2902,6 +3122,7 @@ function refreshAll(){
   renderSettle();
   renderBalance();
   renderSummary();
+  renderNotifyEmailFields();
 }
 
 document.getElementById('f_date').value = todayStr();
