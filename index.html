@@ -2736,8 +2736,10 @@ function renderFixed(){
             <button type="button" class="status-pill paid reimb-confirm-btn" style="margin-top:4px;">はい、受け取りました</button>
             <button type="button" class="link-toggle reimb-reject-btn" style="margin-left:6px;">いいえ・違います</button></div>`;
         }
+      } else if(currentUser === debtor){
+        reimbBox.innerHTML = `<button type="button" class="status-pill due reimb-claim-btn">立替金を返済した（タップで報告）</button>`;
       } else {
-        reimbBox.innerHTML = `<button type="button" class="status-pill due reimb-claim-btn">立替金（${roleLabel(debtor)}負担分）を返済した（タップで報告）</button>`;
+        reimbBox.innerHTML = `<div class="status-pill due" style="cursor:default;">${roleLabel(debtor)}からの返済報告はまだありません</div>`;
       }
     }
     function refreshPill(){
