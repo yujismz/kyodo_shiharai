@@ -243,6 +243,8 @@
   }
   .status-pill.due{ background:#f1ece0; color:var(--sub); }
   .status-pill.paid{ background:var(--yuji-soft); color:var(--yuji); }
+  .status-pill.pill-pending{ background:#fdf3df; color:var(--accent); }
+  .reimb-box .status-pill{ display:inline-block; text-align:left; line-height:1.5; white-space:normal; }
   .month-history{ font-size:11px; color:var(--sub); margin-top:6px; }
   .month-history span{ display:inline-block; margin-right:8px; }
   .modal-overlay{
@@ -401,6 +403,15 @@
   }
   .diff-note.to-yuji{ background:var(--mika-soft); color:var(--mika); }
   .diff-note.to-mika{ background:var(--yuji-soft); color:var(--yuji); }
+  .cat-summary-item{ background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+  .cat-summary-item.grand-total{ background:var(--yuji-soft); border-color:var(--yuji); }
+  .cat-summary-name{ font-weight:700; font-size:13px; margin-bottom:6px; }
+  .cat-summary-row{ display:flex; justify-content:space-between; font-size:12px; color:var(--sub); padding:2px 0; gap:8px; }
+  .cat-summary-row .v{ color:var(--ink); font-weight:600; text-align:right; }
+  .cat-summary-row.highlight{ margin-top:4px; padding-top:6px; border-top:1px dashed var(--line); font-weight:700; }
+  .cat-summary-row.highlight .v{ font-weight:800; }
+  .cat-summary-row.highlight .v.to-yuji{ color:var(--mika); }
+  .cat-summary-row.highlight .v.to-mika{ color:var(--yuji); }
   .exclude-checkbox{
     display:flex; align-items:flex-start; gap:8px; font-size:12px; color:var(--sub);
     margin:10px 0 16px; line-height:1.5; cursor:pointer;
@@ -660,6 +671,13 @@
       <div class="label">現在の精算額</div>
       <div class="amount" id="balanceAmount2">¥0</div>
       <div class="sub" id="balanceSub2">記録なし</div>
+    </div>
+
+    <div class="card">
+      <h2>カテゴリー別サマリー（全期間）</h2>
+      <p class="small-note">上の「現在の精算額」がどう計算されているかの内訳です。一番下の「未精算差額の合計」が、上の金額と一致します。</p>
+      <div id="categorySummaryList"></div>
+      <div class="small-note" id="categorySummaryCheck" style="margin-top:8px;"></div>
     </div>
 
     <div class="card">
@@ -1691,7 +1709,7 @@ function computeBalance(){
   });
   DATA.fixedPayments.forEach(p=>{
     if(p.status!=='paid' || p.settled) return;
-    bal += (p.mika||0) - (p.paidMika||0);
+    bal += fixedOccurrenceDiff(p);
   });
   DATA.settlements.forEach(s=>{
     if(s.reflected) return;
@@ -2613,14 +2631,31 @@ function getOrCreatePayment(fixedId, ym){
   return p;
 }
 
-// 発生済みの月について「先払いしたのはどちら」を後から変更する（精算未確定の間のみ）
-function setFixedPaymentPaidWho(fixedId, ym, who){
+// 立替金の返済：ワンタップではなく「報告→相手の確認」の二人確認にする
+// （タップだけで先払い者を切り替えられると、払っていなくても切替できてしまい揉めるもとになるため）
+function fixedReimbursed(p){ return !!(p && p.reimbursement && p.reimbursement.confirmedBy); }
+function fixedOccurrenceDiff(p){
+  if(fixedReimbursed(p)) return 0;
+  return (p.mika||0) - (p.paidMika||0);
+}
+function claimReimbursement(fixedId, ym){
+  const p = getOrCreatePayment(fixedId, ym);
+  if(p.settled || fixedReimbursed(p)) return p;
+  p.reimbursement = { claimedBy: currentUser, claimedDate: todayStr(), confirmedBy: null, confirmedDate: null };
+  return p;
+}
+function cancelReimbursementClaim(fixedId, ym){
   const p = getOrCreatePayment(fixedId, ym);
   if(p.settled) return p;
-  const total = (p.yuji||0) + (p.mika||0);
-  p.paidWho = who;
-  p.paidYuji = who==='yuji' ? total : 0;
-  p.paidMika = who==='mika' ? total : 0;
+  p.reimbursement = null;
+  return p;
+}
+function confirmReimbursement(fixedId, ym){
+  const p = getOrCreatePayment(fixedId, ym);
+  if(p.settled || !p.reimbursement || p.reimbursement.confirmedBy) return p;
+  if(p.reimbursement.claimedBy === currentUser) return p; // 報告した本人は確認できない
+  p.reimbursement.confirmedBy = currentUser;
+  p.reimbursement.confirmedDate = todayStr();
   return p;
 }
 
@@ -2661,9 +2696,7 @@ function renderFixed(){
         <button type="button" class="status-pill due toggle-paid" data-id="${f.id}">状態を確認</button>
         <button type="button" class="icon-btn edit-fixed" data-id="${f.id}">✏️</button>
       </div>
-      <div class="month-row" style="margin-top:4px;">
-        <button type="button" class="status-pill paidwho-pill" data-id="${f.id}"></button>
-      </div>
+      <div class="reimb-box" data-id="${f.id}" style="margin-top:4px;"></div>
       <div class="month-history">${histHtml}</div>
     </div>`;
   }).join('');
@@ -2676,17 +2709,36 @@ function renderFixed(){
     const id = item.dataset.id;
     const ymSelect = item.querySelector('.ym');
     const pill = item.querySelector('.toggle-paid');
-    const paidWhoPill = item.querySelector('.paidwho-pill');
-    function refreshPaidWhoPill(){
+    const reimbBox = item.querySelector('.reimb-box');
+    function refreshReimbBox(){
       const ym = ymSelect.value;
       const f = DATA.fixed.find(x=>x.id===id);
       const p = DATA.fixedPayments.find(p=>p.fixedId===id && p.yearMonth===ym);
-      const who = p ? (p.paidWho||'yuji') : ((f&&f.paidWho)||'yuji');
       const locked = !!(p && p.settled);
-      paidWhoPill.textContent = `先払い：${who==='yuji'?'勇治':'美香'}${locked?'（精算済み）':'（タップで変更）'}`;
-      paidWhoPill.classList.toggle('due', !locked);
-      paidWhoPill.classList.toggle('paid', locked);
-      paidWhoPill.disabled = locked;
+      const paidWho = p ? (p.paidWho||'yuji') : ((f&&f.paidWho)||'yuji');
+      const debtor = paidWho==='yuji' ? 'mika' : 'yuji';
+      const creditor = debtor==='yuji' ? 'mika' : 'yuji';
+      const r = p ? p.reimbursement : null;
+
+      if(locked){
+        reimbBox.innerHTML = `<div class="status-pill paid" style="opacity:.7;">立替金の精算：確認済み（精算完了のため変更不可）</div>`;
+        return;
+      }
+      if(r && r.confirmedBy){
+        reimbBox.innerHTML = `<div class="status-pill paid">立替金の精算：確認済み ✅（${roleLabel(r.confirmedBy)}が${r.confirmedDate}確認）
+          <button type="button" class="link-toggle reimb-cancel-btn" style="margin-left:6px;">取り消す</button></div>`;
+      } else if(r && r.claimedBy){
+        if(currentUser === r.claimedBy){
+          reimbBox.innerHTML = `<div class="status-pill pill-pending">${r.claimedDate}に返済したと報告済み（${roleLabel(creditor)}の確認待ち）
+            <button type="button" class="link-toggle reimb-cancel-btn" style="margin-left:6px;">取り消す</button></div>`;
+        } else {
+          reimbBox.innerHTML = `<div class="status-pill pill-pending">${roleLabel(r.claimedBy)}が${r.claimedDate}に返済したと報告しています。実際に受け取りましたか？<br>
+            <button type="button" class="status-pill paid reimb-confirm-btn" style="margin-top:4px;">はい、受け取りました</button>
+            <button type="button" class="link-toggle reimb-reject-btn" style="margin-left:6px;">いいえ・違います</button></div>`;
+        }
+      } else {
+        reimbBox.innerHTML = `<button type="button" class="status-pill due reimb-claim-btn">立替金（${roleLabel(debtor)}負担分）を返済した（タップで報告）</button>`;
+      }
     }
     function refreshPill(){
       const ym = ymSelect.value;
@@ -2700,16 +2752,24 @@ function renderFixed(){
       }
     }
     refreshPill();
-    refreshPaidWhoPill();
-    ymSelect.addEventListener('change', ()=>{ refreshPill(); refreshPaidWhoPill(); });
-    paidWhoPill.addEventListener('click', ()=>{
+    refreshReimbBox();
+    ymSelect.addEventListener('change', ()=>{ refreshPill(); refreshReimbBox(); });
+    reimbBox.addEventListener('click', e=>{
       const ym = ymSelect.value;
-      const current = DATA.fixedPayments.find(p=>p.fixedId===id && p.yearMonth===ym);
-      if(current && current.settled) return;
-      const f = DATA.fixed.find(x=>x.id===id);
-      const curWho = current ? (current.paidWho||'yuji') : ((f&&f.paidWho)||'yuji');
-      setFixedPaymentPaidWho(id, ym, curWho==='yuji' ? 'mika' : 'yuji');
-      save(); refreshPaidWhoPill(); renderBalance();
+      if(e.target.closest('.reimb-claim-btn')){
+        claimReimbursement(id, ym);
+      } else if(e.target.closest('.reimb-cancel-btn')){
+        if(!confirm('この立替金の返済報告を取り消しますか？')) return;
+        cancelReimbursementClaim(id, ym);
+      } else if(e.target.closest('.reimb-confirm-btn')){
+        confirmReimbursement(id, ym);
+      } else if(e.target.closest('.reimb-reject-btn')){
+        if(!confirm('報告内容が事実と違う場合、報告を取り消します。よろしいですか？')) return;
+        cancelReimbursementClaim(id, ym);
+      } else {
+        return;
+      }
+      save(); refreshReimbBox(); renderBalance();
     });
     pill.addEventListener('click', ()=>{
       const ym = ymSelect.value;
@@ -2743,7 +2803,123 @@ document.getElementById('settleForm').addEventListener('submit', e=>{
   renderBalance();
 });
 
+/* ===================== カテゴリー別サマリー ===================== */
+// 「今の精算額がなぜその金額か」を、カテゴリー別・毎月の定額・精算履歴の内訳で
+// 全部見えるようにする。一番下の合計（未精算差額）が computeBalance() と
+// 必ず一致するように、同じ集計ロジック（entries: mika-paidMika／
+// fixedPayments: fixedOccurrenceDiff／settlements: 符号付き金額）を使う。
+function emptyCatRow(name){
+  return { name, total:0, paidYuji:0, paidMika:0, burdenYuji:0, burdenMika:0, settledDiff:0, unsettledDiff:0 };
+}
+function addEntryToCatRow(row, e){
+  const paidMika = e.paidMika!=null ? e.paidMika : 0;
+  row.total += e.total||0;
+  row.paidYuji += (e.paidYuji!=null ? e.paidYuji : (e.total||0));
+  row.paidMika += paidMika;
+  row.burdenYuji += e.yuji||0;
+  row.burdenMika += e.mika||0;
+  const diff = (e.mika||0) - paidMika;
+  if(e.settled) row.settledDiff += diff; else row.unsettledDiff += diff;
+}
+function accumulateCatRow(total, row){
+  ['total','paidYuji','paidMika','burdenYuji','burdenMika','settledDiff','unsettledDiff'].forEach(k=>{
+    total[k] = (total[k]||0) + (row[k]||0);
+  });
+}
+function computeCategorySummary(){
+  const rows = [];
+  const grandTotal = emptyCatRow('合計');
+
+  const cats = (DATA.categories||[]).slice();
+  cats.forEach(cat=>{
+    const es = DATA.entries.filter(e=>!e.excluded && (e.category||'')===cat);
+    if(es.length===0) return;
+    const row = emptyCatRow(cat);
+    es.forEach(e=>addEntryToCatRow(row, e));
+    rows.push(row);
+    accumulateCatRow(grandTotal, row);
+  });
+  const uncategorized = DATA.entries.filter(e=>!e.excluded && !cats.includes(e.category||''));
+  if(uncategorized.length){
+    const row = emptyCatRow('（カテゴリ未設定）');
+    uncategorized.forEach(e=>addEntryToCatRow(row, e));
+    rows.push(row);
+    accumulateCatRow(grandTotal, row);
+  }
+
+  const fixedPaid = DATA.fixedPayments.filter(p=>p.status==='paid');
+  if(fixedPaid.length){
+    const row = emptyCatRow('毎月の定額（支払い済み分）');
+    fixedPaid.forEach(p=>{
+      row.total += (p.yuji||0)+(p.mika||0);
+      row.paidYuji += p.paidYuji||0;
+      row.paidMika += p.paidMika||0;
+      row.burdenYuji += p.yuji||0;
+      row.burdenMika += p.mika||0;
+      const diff = fixedOccurrenceDiff(p);
+      if(p.settled) row.settledDiff += diff; else row.unsettledDiff += diff;
+    });
+    rows.push(row);
+    accumulateCatRow(grandTotal, row);
+  }
+
+  if(DATA.settlements.length){
+    const row = { name:'精算履歴（手動記録の調整）', isAdjustment:true, settledDiff:0, unsettledDiff:0 };
+    DATA.settlements.forEach(s=>{
+      const amt = s.direction==='mika_to_yuji' ? -s.amount : s.amount;
+      if(s.reflected) row.settledDiff += amt; else row.unsettledDiff += amt;
+    });
+    rows.push(row);
+    grandTotal.settledDiff += row.settledDiff;
+    grandTotal.unsettledDiff += row.unsettledDiff;
+  }
+
+  return { rows, grandTotal };
+}
+function diffText(v){
+  if(Math.abs(v) < 1) return { text:'差額なし', cls:'' };
+  return v > 0 ? { text:`美香→勇治 ${yen(v)}`, cls:'to-yuji' } : { text:`勇治→美香 ${yen(Math.abs(v))}`, cls:'to-mika' };
+}
+function renderCategorySummaryItem(row, isGrand){
+  const unsettled = diffText(row.unsettledDiff);
+  if(row.isAdjustment){
+    return `<div class="cat-summary-item${isGrand?' grand-total':''}">
+      <div class="cat-summary-name">${escapeHtml(row.name)}</div>
+      <div class="cat-summary-row"><span>精算済み分の調整</span><span class="v">${yen(row.settledDiff)}</span></div>
+      <div class="cat-summary-row highlight"><span>未精算の調整</span><span class="v ${unsettled.cls}">${unsettled.text}</span></div>
+    </div>`;
+  }
+  return `<div class="cat-summary-item${isGrand?' grand-total':''}">
+    <div class="cat-summary-name">${escapeHtml(row.name)}</div>
+    <div class="cat-summary-row"><span>総額</span><span class="v">${yen(row.total)}</span></div>
+    <div class="cat-summary-row"><span>先払い：勇治／美香</span><span class="v">${yen(row.paidYuji)} ／ ${yen(row.paidMika)}</span></div>
+    <div class="cat-summary-row"><span>負担：勇治／美香</span><span class="v">${yen(row.burdenYuji)} ／ ${yen(row.burdenMika)}</span></div>
+    <div class="cat-summary-row"><span>精算済みの差額</span><span class="v">${yen(row.settledDiff)}</span></div>
+    <div class="cat-summary-row highlight"><span>未精算の差額</span><span class="v ${unsettled.cls}">${unsettled.text}</span></div>
+  </div>`;
+}
+function renderCategorySummary(){
+  const wrap = document.getElementById('categorySummaryList');
+  if(!wrap) return;
+  const { rows, grandTotal } = computeCategorySummary();
+  if(rows.length===0){
+    wrap.innerHTML = '<div class="empty-state">まだ記録がありません</div>';
+  } else {
+    wrap.innerHTML = rows.map(r=>renderCategorySummaryItem(r,false)).join('') + renderCategorySummaryItem(grandTotal,true);
+  }
+  const checkEl = document.getElementById('categorySummaryCheck');
+  if(checkEl){
+    const bal = computeBalance();
+    const ok = Math.abs(bal - grandTotal.unsettledDiff) < 1;
+    checkEl.textContent = ok
+      ? '整合性チェック：上の合計は「現在の精算額」と一致しています ✓'
+      : `整合性チェック：一致していません（合計${yen(grandTotal.unsettledDiff)}／現在の精算額${yen(bal)}）。ご報告ください。`;
+    checkEl.style.color = ok ? 'var(--sub)' : 'var(--mika)';
+  }
+}
+
 function renderSettle(){
+  renderCategorySummary();
   renderSettlePeriod();
   const list = document.getElementById('settleList');
   const items = DATA.settlements.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -2804,7 +2980,7 @@ document.getElementById('calcSettlePeriodBtn').addEventListener('click', ()=>{
     if(p.status!=='paid' || p.settled) return false;
     return p.yearMonth >= startYm && p.yearMonth <= endYm;
   });
-  const fixedDiff = fixedTargets.reduce((s,p)=> s + (p.mika||0) - (p.paidMika||0), 0);
+  const fixedDiff = fixedTargets.reduce((s,p)=> s + fixedOccurrenceDiff(p), 0);
 
   // 過去に「精算履歴を記録」で手入力した分も、まだ反映していなければ差額に織り込む
   const settlementTargets = DATA.settlements.filter(s=>{
